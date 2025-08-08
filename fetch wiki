@@ -1,0 +1,72 @@
+import os, re, json, time, requests
+from typing import List
+
+OUTPUT_DIR = "docs"
+JSONL_PATH = "wikipedia_docs.jsonl"
+# Use a generic placeholder URL base; we can change it later if needed.
+BASE_VIEW_URL = "https://example.com/interviewds"
+WIKI_API = "https://en.wikipedia.org/w/api.php"
+HEADERS = {"User-Agent": "Glean-Interview-Script/1.0 (contact: you@example.com)"}
+
+TITLES: List[str] = [
+    "Artificial intelligence","Machine learning","Large language model",
+    "Natural language processing","Vector database","Retrieval-augmented generation",
+    "Cloud computing","Amazon Web Services","Microsoft Azure","Google Cloud Platform",
+    "Kubernetes","Docker","Apache Spark","Databricks","Snowflake Inc.",
+    "Data lake","Data warehouse","Data mesh","Delta Lake","Apache Iceberg",
+    "ETL","ELT","Streaming data","Apache Kafka","Event-driven architecture",
+    "Microservices","REST","GraphQL","gRPC","API gateway",
+    "OAuth","OpenID Connect","JSON Web Token","Zero trust security","Single sign-on",
+    "Generative AI","Prompt engineering","Fine-tuning","Embeddings","Model evaluation",
+    "MLOps","MLflow","Feature store","Model drift","Explainable artificial intelligence",
+    "Information retrieval","BM25","TF–IDF","Cosine similarity","Semantic search"
+]  # 50
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+def to_alnum_id(s: str) -> str:
+    # Glean doc IDs: alphanumeric only, no underscores. Keep it <=64 chars.
+    base = re.sub(r'[^A-Za-z0-9]', '', s)
+    return (base[:64] or "doc").lower()
+
+def fetch_plain_extract(title: str) -> str:
+    params = {
+        "action": "query","prop": "extracts","explaintext": 1,
+        "titles": title,"format": "json","redirects": 1
+    }
+    r = requests.get(WIKI_API, params=params, headers=HEADERS, timeout=30)
+    r.raise_for_status()
+    pages = r.json().get("query", {}).get("pages", {})
+    for _, page in pages.items():
+        return (page.get("extract") or "").strip()
+    return ""
+
+def clean_body(text: str, max_chars: int = 18000) -> str:
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text[:max_chars].strip()
+
+docs = []
+with open(JSONL_PATH, "w", encoding="utf-8") as out:
+    for idx, title in enumerate(TITLES, start=1):
+        try:
+            raw = fetch_plain_extract(title)
+            body = clean_body(raw)
+            if not body:
+                print(f"[WARN] Empty extract: {title}")
+                continue
+            doc_id = to_alnum_id(f"{title}{idx}")
+            view_url = f"{BASE_VIEW_URL}/{doc_id}"
+
+            # optional: save .txt if you decide to host later
+            with open(os.path.join(OUTPUT_DIR, f"{doc_id}.txt"), "w", encoding="utf-8") as f:
+                f.write(body)
+
+            rec = {"id": doc_id, "title": title, "body": body, "viewURL": view_url}
+            out.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            docs.append(rec)
+            print(f"[OK] {idx:02d}/50 {title} -> {doc_id} ({len(body)} chars)")
+            time.sleep(0.2)  # be polite to Wikipedia
+        except Exception as e:
+            print(f"[ERR] {title}: {e}")
+
+print(f"\nDone. Wrote {len(docs)} docs to {JSONL_PATH} and {OUTPUT_DIR}/")
