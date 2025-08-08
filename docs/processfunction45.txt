@@ -1,0 +1,2 @@
+In thermodynamics, a quantity that is well defined so as to describe the path of a process through the equilibrium state space of a thermodynamic system is termed a process function, or, alternatively, a process quantity, or a path function. As an example, mechanical work and heat are process functions because they describe quantitatively the transition between equilibrium states of a thermodynamic system.
+Path functions depend on the path taken to reach one state from another. Different routes give different quantities.

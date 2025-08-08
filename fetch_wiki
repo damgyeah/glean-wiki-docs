@@ -2,7 +2,7 @@ import os, re, json, time, requests
 
 WIKI_API = "https://en.wikipedia.org/w/api.php"
 HEADERS = {"User-Agent": "glean-test-script/1.0"}
-BASE_VIEW_URL = "https://example.com/interviewds"   # swap to GitHub Pages later
+BASE_VIEW_URL = "https://damgyeah.github.io/glean-wiki-docs"
 OUT_DIR, JSONL, TARGET = "docs", "wiki_docs.jsonl", 50
 
 os.makedirs(OUT_DIR, exist_ok=True)
