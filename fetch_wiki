@@ -1,0 +1,44 @@
+import os, re, json, time, requests
+
+WIKI_API = "https://en.wikipedia.org/w/api.php"
+HEADERS = {"User-Agent": "glean-test-script/1.0"}
+BASE_VIEW_URL = "https://example.com/interviewds"   # swap to GitHub Pages later
+OUT_DIR, JSONL, TARGET = "docs", "wiki_docs.jsonl", 50
+
+os.makedirs(OUT_DIR, exist_ok=True)
+
+def alnum_id(s):  # Glean IDs must be alphanumeric only
+    return (re.sub(r'[^A-Za-z0-9]', '', s)[:64] or "doc").lower()
+
+def fetch_random_batch(limit=20): #Random Wiki pages
+    p = {
+        "action":"query","format":"json",
+        "generator":"random","grnnamespace":0,"grnlimit":limit,
+        "prop":"extracts","explaintext":1,"exintro":1,"exsentences":4,
+        "redirects":1
+    }
+    r = requests.get(WIKI_API, params=p, headers=HEADERS, timeout=20)
+    r.raise_for_status()
+    return r.json().get("query", {}).get("pages", {}).values()
+
+seen_titles, docs = set(), []
+with open(JSONL, "w", encoding="utf-8") as out:
+    while len(docs) < TARGET:
+        for pg in fetch_random_batch():
+            title = (pg.get("title") or "").strip()
+            body  = (pg.get("extract") or "").strip()
+            if not title or not body or title in seen_titles: 
+                continue
+            seen_titles.add(title)
+            idx = len(docs) + 1
+            doc_id = alnum_id(f"{title}{idx}")
+            url = f"{BASE_VIEW_URL}/{doc_id}"
+            with open(os.path.join(OUT_DIR, f"{doc_id}.txt"), "w", encoding="utf-8") as f:
+                f.write(body)
+            out.write(json.dumps({"id":doc_id,"title":title,"body":body,"viewURL":url}, ensure_ascii=False) + "\n")
+            docs.append(title)
+            if len(docs) >= TARGET:
+                break
+        time.sleep(0.2)
+
+print("Done.")

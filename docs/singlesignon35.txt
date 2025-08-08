@@ -1,0 +1,4 @@
+Single sign-on (SSO) is an authentication scheme that allows a user to log in with a single ID to any of several related, yet independent, software systems.
+True single sign-on allows the user to log in once and access services without re-entering authentication factors.
+It should not be confused with same-sign on (Directory Server Authentication), often accomplished by using the Lightweight Directory Access Protocol (LDAP) and stored LDAP databases on (directory) servers.
+A simple version of single sign-on can be achieved over IP networks using cookies but only if the sites share a common DNS parent domain.
